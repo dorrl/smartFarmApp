@@ -189,17 +189,22 @@ export default function ServerDetail() {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [pollIntervalMinutes, setPollIntervalMinutes] = useState(5);
 
     const fetchState = useCallback(async () => {
         if (!serverConfig) return;
         try {
             setError(null);
             const formattedUrl = serverConfig.address.startsWith('http') ? serverConfig.address : `http://${serverConfig.address}`;
-            const res = await fetch(`${formattedUrl}/state`, {
-                headers: { 'Accept': 'application/json' },
-            });
+            const [res, settingsRes] = await Promise.all([
+                fetch(`${formattedUrl}/state`, { headers: { 'Accept': 'application/json' } }),
+                fetch(`${formattedUrl}/settings`, { headers: { 'Accept': 'application/json' } }).catch(() => null),
+            ]);
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const json: Respond = await res.json();
+            const serverSettings = settingsRes?.ok ? await settingsRes.json() : null;
+            const interval = Number(serverSettings?.settings?.syncIntervalMinutes);
+            if (Number.isInteger(interval) && interval >= 1) setPollIntervalMinutes(interval);
             setPicos((json.pico ?? []).map(normalizePico));
             void saveServerSnapshot(serverConfig.id, json);
         } catch (e: any) {
@@ -221,6 +226,11 @@ export default function ServerDetail() {
         setLoading(true);
         fetchState();
     }, [fetchState]);
+
+    useEffect(() => {
+        const timer = setInterval(() => { void fetchState(); }, pollIntervalMinutes * 60_000);
+        return () => clearInterval(timer);
+    }, [fetchState, pollIntervalMinutes]);
 
     const onRefresh = () => {
         setRefreshing(true);

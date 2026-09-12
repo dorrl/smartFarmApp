@@ -5,11 +5,11 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { clearServerSnapshot } from '@/utils/localData';
 
-type RuntimeSettings = { measurementIntervalMinutes: number; retentionMonths: number };
+type RuntimeSettings = { measurementIntervalMinutes: number; syncIntervalMinutes: number; retentionMonths: number };
 
 function ServerRuntimeSettings({ server, wide, c }: { server: ServerConfig; wide: number; c: typeof Colors.dark }) {
     const { getServerApiKey } = useServerAddress();
-    const [settings, setSettings] = useState<RuntimeSettings>({ measurementIntervalMinutes: 60, retentionMonths: 6 });
+    const [settings, setSettings] = useState<RuntimeSettings>({ measurementIntervalMinutes: 1, syncIntervalMinutes: 5, retentionMonths: 6 });
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState('');
@@ -28,9 +28,10 @@ function ServerRuntimeSettings({ server, wide, c }: { server: ServerConfig; wide
 
     const save = async () => {
         const measurementIntervalMinutes = Number(settings.measurementIntervalMinutes);
+        const syncIntervalMinutes = Number(settings.syncIntervalMinutes);
         const retentionMonths = Number(settings.retentionMonths);
-        if (!Number.isInteger(measurementIntervalMinutes) || measurementIntervalMinutes < 1 || measurementIntervalMinutes > 1440 || !Number.isInteger(retentionMonths) || retentionMonths < 1 || retentionMonths > 60) {
-            setMessage('측정 주기는 1~1440분, 보관 기간은 1~60개월로 입력하세요.');
+        if (measurementIntervalMinutes !== 1 || !Number.isInteger(syncIntervalMinutes) || syncIntervalMinutes < 1 || syncIntervalMinutes > 1440 || !Number.isInteger(retentionMonths) || retentionMonths < 1 || retentionMonths > 60) {
+            setMessage('저장·앱 갱신 주기는 1~1440분, 보관 기간은 1~60개월로 입력하세요.');
             return;
         }
         setSaving(true); setMessage('');
@@ -38,10 +39,10 @@ function ServerRuntimeSettings({ server, wide, c }: { server: ServerConfig; wide
             const response = await fetch(`${baseUrl}/settings`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-API-Key': apiKey || process.env.EXPO_PUBLIC_SMARTFARM_API_KEY || '' },
-                body: JSON.stringify({ measurementIntervalMinutes, retentionMonths }),
+                body: JSON.stringify({ measurementIntervalMinutes, syncIntervalMinutes, retentionMonths }),
             });
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            setMessage('저장되었습니다. 연결된 센서에 새 측정 주기를 전송했습니다.');
+            setMessage('저장·앱 갱신 주기와 보관 기간이 서버에 저장되었습니다.');
         } catch {
             setMessage('저장에 실패했습니다. 서버 주소와 API 키를 확인하세요.');
         } finally { setSaving(false); }
@@ -76,8 +77,10 @@ function ServerRuntimeSettings({ server, wide, c }: { server: ServerConfig; wide
     return <View style={[styles.card, { backgroundColor: c.main.cover, borderColor: c.main.outline, padding: wide * 4, marginBottom: wide * 3 }]}>
         <Text style={{ fontFamily: 'Pretendard-Bold', color: c.main.text, fontSize: wide * 4 }}>{server.name}</Text>
         {loading ? <ActivityIndicator color={c.accent} style={{ marginVertical: wide * 4 }} /> : <>
-            <Text style={[styles.label, { color: c.subText, fontSize: wide * 3 }]}>센서 측정 주기 (분)</Text>
-            <TextInput style={[styles.input, { color: c.main.text, borderColor: c.main.outline }]} value={String(settings.measurementIntervalMinutes)} keyboardType="number-pad" onChangeText={value => setSettings(current => ({ ...current, measurementIntervalMinutes: Number(value) }))} />
+            <Text style={[styles.label, { color: c.subText, fontSize: wide * 3 }]}>센서 측정 주기</Text>
+            <Text style={[styles.fixedValue, { color: c.main.text, borderColor: c.main.outline }]}>1분마다 측정 (고정)</Text>
+            <Text style={[styles.label, { color: c.subText, fontSize: wide * 3 }]}>서버 저장·앱 갱신 주기 (분)</Text>
+            <TextInput style={[styles.input, { color: c.main.text, borderColor: c.main.outline }]} value={String(settings.syncIntervalMinutes)} keyboardType="number-pad" onChangeText={value => setSettings(current => ({ ...current, syncIntervalMinutes: Number(value) }))} />
             <Text style={[styles.label, { color: c.subText, fontSize: wide * 3 }]}>측정값 보관 기간 (개월)</Text>
             <TextInput style={[styles.input, { color: c.main.text, borderColor: c.main.outline }]} value={String(settings.retentionMonths)} keyboardType="number-pad" onChangeText={value => setSettings(current => ({ ...current, retentionMonths: Number(value) }))} />
             <Pressable onPress={save} disabled={saving} style={[styles.saveButton, { backgroundColor: c.accent, opacity: saving ? 0.6 : 1 }]}>
@@ -133,6 +136,6 @@ export default function Settings() {
 const styles = StyleSheet.create({
     card: { borderWidth: 1, borderRadius: 16, marginBottom: 12 }, heading: { fontFamily: 'Pretendard-SemiBold', fontSize: 14, marginBottom: 10 },
     label: { fontFamily: 'Pretendard-Regular', marginTop: 12, marginBottom: 5 }, input: { fontFamily: 'Pretendard-Medium', borderWidth: 1, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8 },
-    saveButton: { alignItems: 'center', borderRadius: 8, paddingVertical: 10, marginTop: 12 }, saveText: { color: '#FFFFFF', fontFamily: 'Pretendard-Bold' },
+    saveButton: { alignItems: 'center', borderRadius: 8, paddingVertical: 10, marginTop: 12 }, saveText: { color: '#FFFFFF', fontFamily: 'Pretendard-Bold' }, fixedValue: { fontFamily: 'Pretendard-Medium', borderWidth: 1, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 10 },
     deleteButton: { alignItems: 'center', borderRadius: 8, paddingVertical: 10, marginTop: 10, borderWidth: 1 }, deleteText: { fontFamily: 'Pretendard-Bold' }, guide: { fontFamily: 'Pretendard-Regular', fontSize: 13, lineHeight: 20, marginBottom: 8 },
 });

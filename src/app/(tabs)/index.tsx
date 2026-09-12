@@ -28,6 +28,7 @@ interface Server {
     loading?: boolean;
     error?: boolean;
     address?: string;
+    syncIntervalMinutes?: number;
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -268,6 +269,7 @@ export default function Index() {
     const [fetchedServers, setFetchedServers] = useState<Server[]>([]);
     const [refreshing, setRefreshing] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [pollIntervalMinutes, setPollIntervalMinutes] = useState(5);
 
     // Modal states
     const [addModalOpen, setAddModalOpen] = useState(false);
@@ -286,12 +288,19 @@ export default function Index() {
             servers.map(async (srv) => {
                 try {
                     const formattedUrl = srv.address.startsWith('http') ? srv.address : `http://${srv.address}`;
-                    const res = await fetch(`${formattedUrl}/state`, {
-                        headers: { 'Accept': 'application/json' },
-                    });
+                    const [res, settingsRes] = await Promise.all([
+                        fetch(`${formattedUrl}/state`, {
+                            headers: { 'Accept': 'application/json' },
+                        }),
+                        fetch(`${formattedUrl}/settings`, {
+                            headers: { 'Accept': 'application/json' },
+                        }).catch(() => null),
+                    ]);
                     if (!res.ok) throw new Error('Network error');
                     const data = await res.json();
                     void saveServerSnapshot(srv.id, data);
+                    const serverSettings = settingsRes?.ok ? await settingsRes.json() : null;
+                    const syncIntervalMinutes = Number(serverSettings?.settings?.syncIntervalMinutes) || 5;
 
                     const picosList: Pico[] = (data.pico || []).map((p: any) => {
                         let status: PicoStatus = 'normal';
@@ -316,6 +325,7 @@ export default function Index() {
                         picos: picosList,
                         error: false,
                         address: srv.address,
+                        syncIntervalMinutes,
                     };
                 } catch {
                     const cached = await loadServerSnapshot<{ pico?: any[] }>(srv.id);
@@ -334,11 +344,14 @@ export default function Index() {
                         picos: picosList,
                         error: true,
                         address: srv.address,
+                        syncIntervalMinutes: 5,
                     };
                 }
             })
         );
         setFetchedServers(loaded);
+        const intervals = loaded.map(server => server.syncIntervalMinutes).filter((value): value is number => Number.isFinite(value) && value >= 1);
+        setPollIntervalMinutes(intervals.length ? Math.min(...intervals) : 5);
         setLoading(false);
         setRefreshing(false);
     }, [servers]);
@@ -346,6 +359,11 @@ export default function Index() {
     useEffect(() => {
         loadData();
     }, [loadData]);
+
+    useEffect(() => {
+        const timer = setInterval(() => { void loadData(); }, pollIntervalMinutes * 60_000);
+        return () => clearInterval(timer);
+    }, [loadData, pollIntervalMinutes]);
 
     const handleRefresh = () => {
         setRefreshing(true);
