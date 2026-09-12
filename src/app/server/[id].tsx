@@ -38,10 +38,13 @@ export type PicoType = {
     id: string;
     connected: boolean;
     state: PicoState;
+    receivedAt?: string;
 }
 
 export type Respond = {
     state: number;
+    source?: 'latest-received';
+    servedAt?: string;
     pico: PicoType[];
 }
 
