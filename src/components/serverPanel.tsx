@@ -1,5 +1,6 @@
 import { Colors } from '@/constants/Colors';
 import { useTheme } from '@/hooks/useTheme';
+import { formatSensorValue } from '@/utils/formatSensorValue';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { Pressable, Text, useWindowDimensions, View } from 'react-native';
@@ -76,14 +77,14 @@ function PicoCard({ pico, wide, isDark }: { pico: Pico; wide: number; isDark: bo
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: wide * 1 }}>
                                 <Ionicons name="thermometer-outline" size={wide * 3.5} color={cardColor.text} />
                                 <Text style={{ fontFamily: 'Pretendard-SemiBold', fontSize: wide * 4.5, color: cardColor.text }}>
-                                    {pico.temp}°
+                                    {formatSensorValue(pico.temp)}°
                                 </Text>
                             </View>
                             {pico.humidity != null && (
                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: wide * 1 }}>
                                     <Ionicons name="water-outline" size={wide * 3.5} color={cardColor.text} />
                                     <Text style={{ fontFamily: 'Pretendard-SemiBold', fontSize: wide * 4.5, color: cardColor.text }}>
-                                        {pico.humidity}%
+                                        {formatSensorValue(pico.humidity)}%
                                     </Text>
                                 </View>
                             )}
@@ -91,7 +92,7 @@ function PicoCard({ pico, wide, isDark }: { pico: Pico; wide: number; isDark: bo
                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: wide * 0.8, backgroundColor: isDark ? 'rgba(251,191,36,0.15)' : 'rgba(217,119,6,0.1)', paddingHorizontal: wide * 1.5, paddingVertical: wide * 0.5, borderRadius: wide * 1.5 }}>
                                     <Ionicons name="sunny" size={wide * 3.2} color={sunColor} />
                                     <Text style={{ fontFamily: 'Pretendard-Bold', fontSize: wide * 3.8, color: sunColor }}>
-                                        {typeof pico.light === 'number' ? `${pico.light}lx` : pico.light}
+                                        {typeof pico.light === 'number' ? `${formatSensorValue(pico.light)}lx` : pico.light}
                                     </Text>
                                 </View>
                             )}

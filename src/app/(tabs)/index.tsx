@@ -1,10 +1,11 @@
 import { Colors } from '@/constants/Colors';
 import { useServerAddress } from '@/hooks/useServerAddress';
 import { useTheme } from '@/hooks/useTheme';
+import { formatSensorValue } from '@/utils/formatSensorValue';
 import { loadServerSnapshot, saveServerSnapshot } from '@/utils/localData';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
@@ -16,7 +17,7 @@ interface Pico {
     name: string;
     temp?: number;
     humidity?: number;
-    activeTime?: string;
+    light?: number;
     status: PicoStatus;
 }
 
@@ -67,6 +68,7 @@ function MiniPicoCard({ pico, isServerDark, wide }: { pico: Pico; isServerDark: 
                 width: '23.5%',
                 height: wide * 22,
                 padding: wide * 1.5,
+                marginRight: wide * 3,
                 borderRadius: wide * 2.5,
                 borderColor: isServerDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
                 borderWidth: 1,
@@ -83,11 +85,11 @@ function MiniPicoCard({ pico, isServerDark, wide }: { pico: Pico; isServerDark: 
                 <View style={{ gap: wide * 0.4 }}>
                     <View style={styles.miniValRow}>
                         <Ionicons name="thermometer-outline" size={wide * 2.4} color={iconColor} />
-                        <Text style={[styles.miniPicoTxt, { color: textColor, fontSize: wide * 2.2 }]}>{pico.temp}°C</Text>
+                        <Text style={[styles.miniPicoTxt, { color: textColor, fontSize: wide * 2.2 }]}>{formatSensorValue(pico.temp)}°C</Text>
                     </View>
                     <View style={styles.miniValRow}>
                         <Ionicons name="water-outline" size={wide * 2.4} color={iconColor} />
-                        <Text style={[styles.miniPicoTxt, { color: textColor, fontSize: wide * 2.2 }]}>{pico.humidity}%</Text>
+                        <Text style={[styles.miniPicoTxt, { color: textColor, fontSize: wide * 2.2 }]}>{formatSensorValue(pico.humidity)}%</Text>
                     </View>
                     <View style={[styles.miniValRow, {
                         backgroundColor: isServerDark ? 'rgba(251, 191, 36, 0.15)' : 'rgba(217, 119, 6, 0.1)',
@@ -98,7 +100,7 @@ function MiniPicoCard({ pico, isServerDark, wide }: { pico: Pico; isServerDark: 
                     }]}>
                         <Ionicons name="sunny" size={wide * 2.4} color={isServerDark ? '#FBBF24' : '#D97706'} />
                         <Text style={[styles.miniPicoTxt, { color: isServerDark ? '#FBBF24' : '#D97706', fontSize: wide * 2.2, fontFamily: 'Pretendard-Bold' }]} numberOfLines={1}>
-                            {pico.activeTime}
+                            {formatSensorValue(pico.light)} lx
                         </Text>
                     </View>
                 </View>
@@ -224,7 +226,7 @@ function ServerCard({ server, wide, isDarkTheme, onConfigure }: {
                                 }
                             ]}
                         >
-                            <Ionicons name="cog-outline" size={wide * 5.2} color={isDark ? '#94A3B8' : '#64748B'} />
+                            <Ionicons name="settings-sharp" size={wide * 5.2} color={isDark ? '#94A3B8' : '#64748B'} />
                         </Pressable>
                     </View>
                 </View>
@@ -234,22 +236,6 @@ function ServerCard({ server, wide, isDarkTheme, onConfigure }: {
                     {server.picos.map((pico, idx) => (
                         <MiniPicoCard key={idx} pico={pico} isServerDark={isDark} wide={wide} />
                     ))}
-                    {/* Add button inside grid */}
-                    <View style={[
-                        styles.miniPico,
-                        styles.centerAlign,
-                        {
-                            backgroundColor: plusBg,
-                            width: '23.5%',
-                            height: wide * 22,
-                            borderRadius: wide * 2.5,
-                            borderStyle: 'dashed',
-                            borderWidth: 1,
-                            borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0, 0, 0, 0.08)',
-                        }
-                    ]}>
-                        <Ionicons name="add" size={wide * 6} color={plusColor} />
-                    </View>
                 </View>
             </Animated.View>
         </Pressable>
@@ -313,7 +299,7 @@ export default function Index() {
                             name: p.name || p.id,
                             temp: p.state.temperature,
                             humidity: p.state.moisture,
-                            activeTime: `${p.state.light} lx`,
+                            light: p.state.light,
                             status,
                         };
                     });
@@ -333,7 +319,7 @@ export default function Index() {
                         name: p.name || p.id,
                         temp: p.state?.temperature,
                         humidity: p.state?.moisture,
-                        activeTime: `${p.state?.light ?? 0} lx`,
+                        light: p.state?.light,
                         status: !p.connected ? 'disconnected' : (p.state?.temperature > 30 || p.state?.temperature < 15 || p.state?.moisture < 30) ? 'wrong' : 'normal',
                     }));
                     return {
@@ -350,7 +336,7 @@ export default function Index() {
             })
         );
         setFetchedServers(loaded);
-        const intervals = loaded.map(server => server.syncIntervalMinutes).filter((value): value is number => Number.isFinite(value) && value >= 1);
+        const intervals = loaded.map(server => server.syncIntervalMinutes).filter((value): value is number => Number.isFinite(value) && value as number >= 1);
         setPollIntervalMinutes(intervals.length ? Math.min(...intervals) : 5);
         setLoading(false);
         setRefreshing(false);
@@ -478,7 +464,7 @@ export default function Index() {
                                 server={server}
                                 wide={wide}
                                 isDarkTheme={isDark}
-                                onConfigure={() => handleOpenEdit(server)}
+                                onConfigure={() => router.push({ pathname: '/server/[id]/setting', params: { id: server.id} })}
                             />
                         ))}
 
@@ -663,7 +649,7 @@ const styles = StyleSheet.create({
     grid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        justifyContent: 'space-between',
+        justifyContent: 'flex-start',
         rowGap: 8,
     },
     miniPico: {

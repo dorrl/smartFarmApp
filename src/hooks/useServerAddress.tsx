@@ -15,6 +15,7 @@ interface ServerAddressContextType {
     updateServerConfig: (id: string, name: string, description: string, address: string) => void;
     addServerConfig: (name: string, description: string, address: string) => void;
     deleteServerConfig: (id: string) => void;
+    getServerById: (id: string) => ServerConfig | undefined;
     getServerApiKey: (id: string) => Promise<string>;
     setServerApiKey: (id: string, apiKey: string) => Promise<void>;
 }
@@ -24,6 +25,11 @@ const ServerAddressContext = createContext<ServerAddressContextType | undefined>
 const INITIAL_SERVERS: ServerConfig[] = [];
 
 const STORAGE_KEY = '@smartfarm/server-configs';
+
+const getApiKeyStorageKey = (id: string) => {
+    const safeId = id.replace(/[^A-Za-z0-9._-]/g, '_');
+    return safeId ? `smartfarm-api-key-${safeId}` : '';
+};
 
 export function ServerAddressProvider({ children }: { children: React.ReactNode }) {
     const [servers, setServers] = useState<ServerConfig[]>(INITIAL_SERVERS);
@@ -39,7 +45,8 @@ export function ServerAddressProvider({ children }: { children: React.ReactNode 
                     && typeof item.description === 'string' && typeof item.address === 'string'
                 )) {
                     const migrated = (parsed as (ServerConfig & { apiKey?: unknown })[]).map(({ apiKey, ...server }) => {
-                        if (typeof apiKey === 'string' && apiKey) void SecureStore.setItemAsync(`smartfarm-api-key/${server.id}`, apiKey);
+                        const key = getApiKeyStorageKey(server.id);
+                        if (key && typeof apiKey === 'string' && apiKey) void SecureStore.setItemAsync(key, apiKey);
                         return server;
                     });
                     setServers(migrated);
@@ -57,9 +64,13 @@ export function ServerAddressProvider({ children }: { children: React.ReactNode 
         void AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     };
 
-    const getServerApiKey = useCallback((id: string) => SecureStore.getItemAsync(`smartfarm-api-key/${id}`).then(value => value ?? ''), []);
+    const getServerApiKey = useCallback((id: string) => {
+        const key = getApiKeyStorageKey(id);
+        return key ? SecureStore.getItemAsync(key).then(value => value ?? '') : Promise.resolve('');
+    }, []);
     const setServerApiKey = useCallback(async (id: string, apiKey: string) => {
-        const key = `smartfarm-api-key/${id}`;
+        const key = getApiKeyStorageKey(id);
+        if (!key) return;
         if (apiKey) await SecureStore.setItemAsync(key, apiKey);
         else await SecureStore.deleteItemAsync(key);
     }, []);
@@ -74,12 +85,15 @@ export function ServerAddressProvider({ children }: { children: React.ReactNode 
     };
 
     const deleteServerConfig = (id: string) => {
-        void SecureStore.deleteItemAsync(`smartfarm-api-key/${id}`);
+        const key = getApiKeyStorageKey(id);
+        if (key) void SecureStore.deleteItemAsync(key);
         save(servers.filter((srv) => srv.id !== id));
     };
 
+    const getServerById = (id: string) => servers.find((server) => server.id === id);
+
     return (
-        <ServerAddressContext.Provider value={{ servers, loaded, updateServerConfig, addServerConfig, deleteServerConfig, getServerApiKey, setServerApiKey }}>
+        <ServerAddressContext.Provider value={{ servers, loaded, updateServerConfig, addServerConfig, deleteServerConfig, getServerById, getServerApiKey, setServerApiKey }}>
             {children}
         </ServerAddressContext.Provider>
     );

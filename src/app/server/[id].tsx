@@ -1,10 +1,11 @@
 import { Colors } from '@/constants/Colors';
 import { useServerAddress } from '@/hooks/useServerAddress';
 import { useTheme } from '@/hooks/useTheme';
+import { formatSensorValue } from '@/utils/formatSensorValue';
 import { loadServerSnapshot, saveServerSnapshot } from '@/utils/localData';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
@@ -19,7 +20,7 @@ interface Pico {
     tempMax?: number;
     humidity?: number;
     humidityMax?: number;
-    activeTime?: string;
+    light?: number;
     status: PicoStatus;
 }
 
@@ -65,7 +66,7 @@ function normalizePico(raw: PicoType): Pico {
         tempMax: 35,
         humidity: raw.state.moisture,
         humidityMax: 100,
-        activeTime: `${raw.state.light} lx`,
+        light: raw.state.light,
         status,
     };
 }
@@ -81,7 +82,7 @@ function GaugeBar({ label, value, max, color, wide, isDark, unit }: {
         <View style={{ marginBottom: wide * 1.8 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: wide * 0.6 }}>
                 <Text style={{ fontSize: wide * 2.8, fontFamily: 'Pretendard-Regular', color: isDark ? '#94A3B8' : '#64748B' }}>{label}</Text>
-                <Text style={{ fontSize: wide * 2.8, fontFamily: 'Pretendard-Bold', color }}>{value}{displayUnit}</Text>
+                <Text style={{ fontSize: wide * 2.8, fontFamily: 'Pretendard-Bold', color }}>{formatSensorValue(value)}{displayUnit}</Text>
             </View>
             <View style={[styles.gaugeTrack, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)' }]}>
                 <View style={[styles.gaugeFill, { width: `${pct}%`, backgroundColor: color }]} />
@@ -124,7 +125,9 @@ function LargePicoCard({ pico, wide, isDark }: { pico: Pico; wide: number; isDar
         badgeLabel = '비활성';
     }
 
-    const lightVal = pico.activeTime ? parseInt(pico.activeTime.replace(/[^0-9]/g, '')) || 0 : 0;
+    // Keep light as a number. Stripping non-digits from "18.833" would turn it
+    // into 18833 and make the gauge look vastly brighter than it really is.
+    const lightVal = pico.light ?? 0;
 
     return (
         <Pressable onPress={pressHandler} style={{ width: '48%', marginBottom: wide * 4 }}>
@@ -155,7 +158,7 @@ function LargePicoCard({ pico, wide, isDark }: { pico: Pico; wide: number; isDar
                                 borderRadius: wide * 2,
                             }}>
                                 <Ionicons name="sunny" size={wide * 3.2} color={lightColor} />
-                                <Text style={{ fontSize: wide * 2.6, fontFamily: 'Pretendard-Bold', color: lightColor, marginLeft: wide * 1 }}>{pico.activeTime}</Text>
+                                <Text style={{ fontSize: wide * 2.6, fontFamily: 'Pretendard-Bold', color: lightColor, marginLeft: wide * 1 }}>{formatSensorValue(lightVal)} lx</Text>
                             </View>
                         </View>
                     </View>
@@ -251,9 +254,9 @@ export default function ServerDetail() {
                     <Ionicons name="chevron-back" size={wide * 5} color={c.main.text} />
                 </Pressable>
                 <View style={{ flex: 1 }} />
-                <Pressable onPress={fetchState}
+                <Pressable onPress={() => router.push({ pathname: '/server/[id]/setting', params: { id: id }})}
                     style={[styles.headerIcon, { backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : '#FFFFFF' }]}>
-                    <Ionicons name="refresh-outline" size={wide * 5} color={c.main.text} />
+                    <Ionicons name="settings-sharp" size={wide * 5} color={c.main.text} />
                 </Pressable>
             </View>
 
@@ -334,19 +337,6 @@ export default function ServerDetail() {
                             {filteredPicos.map((pico, idx) => (
                                 <LargePicoCard key={idx} pico={pico} wide={wide} isDark={isDark} />
                             ))}
-                            {/* Add pico card */}
-                            <Pressable style={{ width: '48%' }}>
-                                <View style={[styles.largePico, styles.centerContent, {
-                                    borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
-                                    backgroundColor: isDark ? 'rgba(255,255,255,0.01)' : 'rgba(0,0,0,0.005)',
-                                    borderStyle: 'dashed', borderWidth: 2, borderRadius: wide * 4.5, minHeight: wide * 48,
-                                }]}>
-                                    <Ionicons name="add-circle" size={wide * 9} color={isDark ? 'rgba(255,255,255,0.1)' : '#CBD5E1'} style={{ marginBottom: wide * 1 }} />
-                                    <Text style={{ fontFamily: 'Pretendard-Medium', fontSize: wide * 2.8, color: isDark ? '#475569' : '#94A3B8' }}>
-                                        장치 연결 추가
-                                    </Text>
-                                </View>
-                            </Pressable>
                         </View>
                     </>
                 )}

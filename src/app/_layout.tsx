@@ -36,6 +36,7 @@ export default function RootLayout() {
                 <Stack screenOptions={{ headerShown: false }}>
                     <Stack.Screen name="(tabs)" />
                     <Stack.Screen name="server/[id]" />
+                    <Stack.Screen name="server/[id]/setting" />
                 </Stack>
             </ServerAddressProvider>
         </ThemeProvider>
