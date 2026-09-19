@@ -187,7 +187,7 @@ export default function ServerDetail() {
     const { width, height } = useWindowDimensions();
     const wide = Math.min(width, height) * 0.01;
 
-    const { servers } = useServerAddress();
+    const { servers, getServerById } = useServerAddress();
     const serverConfig = servers.find(s => s.id === id) || servers[0];
 
     const [filter, setFilter] = useState<FilterType>('all');
@@ -196,6 +196,8 @@ export default function ServerDetail() {
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [pollIntervalMinutes, setPollIntervalMinutes] = useState(5);
+
+    if (getServerById(id) === undefined) return
 
     const fetchState = useCallback(async () => {
         if (!serverConfig) return;

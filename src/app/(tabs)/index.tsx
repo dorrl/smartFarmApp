@@ -470,7 +470,7 @@ export default function Index() {
 
                         {/* Add new server card at bottom */}
                         <Pressable
-                            onPress={() => setAddModalOpen(true)}
+                            onPress={() => {router.push('/server/create')}}
                             style={[
                                 styles.addServerCard,
                                 {
@@ -534,68 +534,8 @@ export default function Index() {
                             <Pressable onPress={() => setAddModalOpen(false)} style={[styles.modalBtn, styles.cancelBtn, { borderColor: c.main.outline }]}>
                                 <Text style={{ color: c.subText, fontFamily: 'Pretendard-SemiBold' }}>취소</Text>
                             </Pressable>
-                            <Pressable onPress={handleAddServer} style={[styles.modalBtn, { backgroundColor: c.accent }]}>
+                            <Pressable onPress={() => {}} style={[styles.modalBtn, { backgroundColor: c.accent }]}>
                                 <Text style={{ color: '#FFFFFF', fontFamily: 'Pretendard-SemiBold' }}>추가</Text>
-                            </Pressable>
-                        </View>
-                    </View>
-                </View>
-            </Modal>
-
-            {/* ─── EDIT SERVER MODAL ─── */}
-            <Modal visible={editModalOpen} transparent={true} animationType="fade" onRequestClose={() => setEditModalOpen(false)}>
-                <View style={styles.modalOverlay}>
-                    <View style={[styles.modalContent, { backgroundColor: isDark ? '#1F2937' : '#FFFFFF', borderColor: c.main.outline }]}>
-                        <Text style={[styles.modalTitle, { color: c.main.text }]}>서버 구성 설정</Text>
-
-                        <View style={styles.modalField}>
-                            <Text style={[styles.modalLabel, { color: c.subText }]}>서버 이름 *</Text>
-                            <TextInput
-                                style={[styles.modalInput, { color: c.main.text, borderColor: c.main.outline }]}
-                                placeholder="이름"
-                                placeholderTextColor={c.subText}
-                                value={editName}
-                                onChangeText={setEditName}
-                            />
-                        </View>
-
-                        <View style={styles.modalField}>
-                            <Text style={[styles.modalLabel, { color: c.subText }]}>설명/위치</Text>
-                            <TextInput
-                                style={[styles.modalInput, { color: c.main.text, borderColor: c.main.outline }]}
-                                placeholder="설명"
-                                placeholderTextColor={c.subText}
-                                value={editDesc}
-                                onChangeText={setEditDesc}
-                            />
-                        </View>
-
-                        <View style={styles.modalField}>
-                            <Text style={[styles.modalLabel, { color: c.subText }]}>서버 IP/링크 *</Text>
-                            <TextInput
-                                style={[styles.modalInput, { color: c.main.text, borderColor: c.main.outline }]}
-                                placeholder="주소"
-                                placeholderTextColor={c.subText}
-                                autoCapitalize="none"
-                                value={editAddr}
-                                onChangeText={setEditAddr}
-                            />
-                        </View>
-
-                        <View style={styles.modalActions}>
-                            <Pressable onPress={handleDeleteServer} style={[styles.modalBtn, { backgroundColor: 'rgba(239, 68, 68, 0.1)', borderColor: '#EF4444', borderWidth: 1 }]}>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                                    <Ionicons name="trash-outline" size={16} color="#EF4444" style={{ top: -0.5 }} />
-                                    <Text style={{ color: '#EF4444', fontFamily: 'Pretendard-SemiBold' }}>삭제</Text>
-                                </View>
-                            </Pressable>
-
-                            <Pressable onPress={() => setEditModalOpen(false)} style={[styles.modalBtn, styles.cancelBtn, { borderColor: c.main.outline }]}>
-                                <Text style={{ color: c.subText, fontFamily: 'Pretendard-SemiBold' }}>취소</Text>
-                            </Pressable>
-
-                            <Pressable onPress={handleSaveEdit} style={[styles.modalBtn, { backgroundColor: c.accent }]}>
-                                <Text style={{ color: '#FFFFFF', fontFamily: 'Pretendard-SemiBold' }}>저장</Text>
                             </Pressable>
                         </View>
                     </View>

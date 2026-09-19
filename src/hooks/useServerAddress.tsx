@@ -79,7 +79,7 @@ export function ServerAddressProvider({ children }: { children: React.ReactNode 
         save(servers.map((srv) => srv.id === id ? { ...srv, name, description, address } : srv));
     };
 
-    const addServerConfig = (name: string, description: string, address: string) => {
+    const addServerConfig = (name: string, description: string, address: string ) => {
         const newId = `Server_${Date.now()}`;
         save([...servers, { id: newId, name, description, address }]);
     };
